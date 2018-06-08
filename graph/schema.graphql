@@ -1,0 +1,25 @@
+scalar Time
+
+type User {
+  id: String!
+  name: String!
+}
+
+type Message {
+  id: String!
+  user: User
+  createdAt: Time!
+  text: String!
+}
+
+type Mutation {
+  postMessage(text: String!): Message
+}
+
+type Query {
+  messages(skip: Int, take: Int): [Message!]!
+}
+
+type Subscription {
+  messagePosted: Message!
+}
