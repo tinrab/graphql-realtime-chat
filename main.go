@@ -2,16 +2,29 @@ package main
 
 import (
 	"log"
-	"net/http"
 
-	"github.com/tinrab/fluffy-kitten/graph"
-	"github.com/vektah/gqlgen/handler"
+	"github.com/kelseyhightower/envconfig"
+	"github.com/tinrab/graphql-realtime-chat/server"
 )
 
-func main() {
-	s := graph.NewGraphQLServer()
-	http.Handle("/graphql", handler.GraphQL(graph.MakeExecutableSchema(s)))
-	http.Handle("/playground", handler.Playground("App", "/graphql"))
+type config struct {
+	RedisURL string `envconfig:"REDIS_URL"`
+}
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+func main() {
+	var cfg config
+	err := envconfig.Process("", &cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s, err := server.NewGraphQLServer(cfg.RedisURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = s.Serve("/graphql", 8080)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

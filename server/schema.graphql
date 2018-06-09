@@ -1,13 +1,8 @@
 scalar Time
 
-type User {
-  id: String!
-  name: String!
-}
-
 type Message {
   id: String!
-  user: User
+  user: String!
   createdAt: Time!
   text: String!
 }
@@ -17,7 +12,7 @@ type Mutation {
 }
 
 type Query {
-  messages(skip: Int, take: Int): [Message!]!
+  users: [String!]!
 }
 
 type Subscription {
