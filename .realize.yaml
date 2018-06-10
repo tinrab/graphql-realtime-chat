@@ -1,0 +1,28 @@
+settings:
+  legacy:
+    force: false
+    interval: 0s
+server:
+  status: false
+  open: false
+  host: localhost
+  port: 8080
+schema:
+- name: graphql-realtime-chat
+  path: .
+  env:
+    REDIS_URL: localhost:6379
+  commands:
+    test:
+      status: true
+    run:
+      status: true
+  watcher:
+    extensions:
+    - go
+    paths:
+    - /
+    ignored_paths:
+    - .git
+    - .realize
+    - vendor
