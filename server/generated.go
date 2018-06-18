@@ -19,6 +19,7 @@ func MakeExecutableSchema(resolvers Resolvers) graphql.ExecutableSchema {
 
 type Resolvers interface {
 	Mutation_postMessage(ctx context.Context, text string) (*Message, error)
+	Query_messages(ctx context.Context) ([]Message, error)
 	Query_users(ctx context.Context) ([]string, error)
 
 	Subscription_messagePosted(ctx context.Context) (<-chan Message, error)
@@ -251,6 +252,8 @@ func (ec *executionContext) _Query(ctx context.Context, sel []query.Selection) g
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "messages":
+			out.Values[i] = ec._Query_messages(ctx, field)
 		case "users":
 			out.Values[i] = ec._Query_users(ctx, field)
 		case "__schema":
@@ -263,6 +266,45 @@ func (ec *executionContext) _Query(ctx context.Context, sel []query.Selection) g
 	}
 
 	return out
+}
+
+func (ec *executionContext) _Query_messages(ctx context.Context, field graphql.CollectedField) graphql.Marshaler {
+	ctx = graphql.WithResolverContext(ctx, &graphql.ResolverContext{
+		Object: "Query",
+		Args:   nil,
+		Field:  field,
+	})
+	return graphql.Defer(func() (ret graphql.Marshaler) {
+		defer func() {
+			if r := recover(); r != nil {
+				userErr := ec.Recover(ctx, r)
+				ec.Error(ctx, userErr)
+				ret = graphql.Null
+			}
+		}()
+
+		resTmp, err := ec.ResolverMiddleware(ctx, func(ctx context.Context) (interface{}, error) {
+			return ec.resolvers.Query_messages(ctx)
+		})
+		if err != nil {
+			ec.Error(ctx, err)
+			return graphql.Null
+		}
+		if resTmp == nil {
+			return graphql.Null
+		}
+		res := resTmp.([]Message)
+		arr1 := graphql.Array{}
+		for idx1 := range res {
+			arr1 = append(arr1, func() graphql.Marshaler {
+				rctx := graphql.GetResolverContext(ctx)
+				rctx.PushIndex(idx1)
+				defer rctx.Pop()
+				return ec._Message(ctx, field.Selections, &res[idx1])
+			}())
+		}
+		return arr1
+	})
 }
 
 func (ec *executionContext) _Query_users(ctx context.Context, field graphql.CollectedField) graphql.Marshaler {
@@ -1134,6 +1176,7 @@ type Mutation {
 }
 
 type Query {
+  messages: [Message!]!
   users: [String!]!
 }
 
