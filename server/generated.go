@@ -18,11 +18,11 @@ func MakeExecutableSchema(resolvers Resolvers) graphql.ExecutableSchema {
 }
 
 type Resolvers interface {
-	Mutation_postMessage(ctx context.Context, text string) (*Message, error)
+	Mutation_postMessage(ctx context.Context, user string, text string) (*Message, error)
 	Query_messages(ctx context.Context) ([]Message, error)
 	Query_users(ctx context.Context) ([]string, error)
 
-	Subscription_messagePosted(ctx context.Context) (<-chan Message, error)
+	Subscription_messagePosted(ctx context.Context, user string) (<-chan Message, error)
 }
 
 type executableSchema struct {
@@ -202,7 +202,7 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel []query.Selection
 func (ec *executionContext) _Mutation_postMessage(ctx context.Context, field graphql.CollectedField) graphql.Marshaler {
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := field.Args["text"]; ok {
+	if tmp, ok := field.Args["user"]; ok {
 		var err error
 		arg0, err = graphql.UnmarshalString(tmp)
 		if err != nil {
@@ -210,7 +210,17 @@ func (ec *executionContext) _Mutation_postMessage(ctx context.Context, field gra
 			return graphql.Null
 		}
 	}
-	args["text"] = arg0
+	args["user"] = arg0
+	var arg1 string
+	if tmp, ok := field.Args["text"]; ok {
+		var err error
+		arg1, err = graphql.UnmarshalString(tmp)
+		if err != nil {
+			ec.Error(ctx, err)
+			return graphql.Null
+		}
+	}
+	args["text"] = arg1
 	rctx := graphql.GetResolverContext(ctx)
 	rctx.Object = "Mutation"
 	rctx.Args = args
@@ -219,7 +229,7 @@ func (ec *executionContext) _Mutation_postMessage(ctx context.Context, field gra
 	defer rctx.Pop()
 
 	resTmp, err := ec.ResolverMiddleware(ctx, func(ctx context.Context) (interface{}, error) {
-		return ec.resolvers.Mutation_postMessage(ctx, args["text"].(string))
+		return ec.resolvers.Mutation_postMessage(ctx, args["user"].(string), args["text"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -407,8 +417,19 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel []query.Selec
 }
 
 func (ec *executionContext) _Subscription_messagePosted(ctx context.Context, field graphql.CollectedField) func() graphql.Marshaler {
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := field.Args["user"]; ok {
+		var err error
+		arg0, err = graphql.UnmarshalString(tmp)
+		if err != nil {
+			ec.Error(ctx, err)
+			return nil
+		}
+	}
+	args["user"] = arg0
 	ctx = graphql.WithResolverContext(ctx, &graphql.ResolverContext{Field: field})
-	results, err := ec.resolvers.Subscription_messagePosted(ctx)
+	results, err := ec.resolvers.Subscription_messagePosted(ctx, args["user"].(string))
 	if err != nil {
 		ec.Error(ctx, err)
 		return nil
@@ -1172,7 +1193,7 @@ type Message {
 }
 
 type Mutation {
-  postMessage(text: String!): Message
+  postMessage(user: String!, text: String!): Message
 }
 
 type Query {
@@ -1181,6 +1202,6 @@ type Query {
 }
 
 type Subscription {
-  messagePosted: Message!
+  messagePosted(user: String!): Message!
 }
 `)

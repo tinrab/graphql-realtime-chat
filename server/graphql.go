@@ -6,9 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
+	"github.com/rs/cors"
+
 	"github.com/go-redis/redis"
+	"github.com/gorilla/websocket"
 	"github.com/segmentio/ksuid"
 	"github.com/vektah/gqlgen/handler"
 )
@@ -20,8 +24,9 @@ const (
 )
 
 type graphQLServer struct {
-	redisClient *redis.Client
-	messageCh   chan Message
+	redisClient     *redis.Client
+	messageChannels map[string]chan Message
+	mutex           sync.Mutex
 }
 
 func NewGraphQLServer(redisURL string) (*graphQLServer, error) {
@@ -33,23 +38,31 @@ func NewGraphQLServer(redisURL string) (*graphQLServer, error) {
 		return nil, err
 	}
 	return &graphQLServer{
-		redisClient: client,
-		messageCh:   make(chan Message, 1),
+		redisClient:     client,
+		messageChannels: map[string]chan Message{},
+		mutex:           sync.Mutex{},
 	}, nil
 }
 
 func (s *graphQLServer) Serve(route string, port int) error {
-	http.Handle(
+	mux := http.NewServeMux()
+	mux.Handle(
 		route,
-		authenticate(handler.GraphQL(MakeExecutableSchema(s))),
+		handler.GraphQL(MakeExecutableSchema(s),
+			handler.WebsocketUpgrader(websocket.Upgrader{
+				CheckOrigin: func(r *http.Request) bool {
+					return true
+				},
+			}),
+		),
 	)
-	http.Handle("/playground", handler.Playground("GraphQL", route))
+	mux.Handle("/playground", handler.Playground("GraphQL", route))
 
-	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	handler := cors.AllowAll().Handler(mux)
+	return http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
 }
 
-func (s *graphQLServer) Mutation_postMessage(ctx context.Context, text string) (*Message, error) {
-	user := ctx.Value(userContextKey).(string)
+func (s *graphQLServer) Mutation_postMessage(ctx context.Context, user string, text string) (*Message, error) {
 	if err := s.redisClient.LPush("users", user).Err(); err != nil {
 		return nil, err
 	}
@@ -64,9 +77,35 @@ func (s *graphQLServer) Mutation_postMessage(ctx context.Context, text string) (
 	if err := s.redisClient.LPush("messages", mj).Err(); err != nil {
 		return nil, err
 	}
-	s.messageCh <- m
+
+	s.mutex.Lock()
+	for _, ch := range s.messageChannels {
+		ch <- m
+	}
+	s.mutex.Unlock()
 
 	return &m, nil
+}
+
+func (s *graphQLServer) Subscription_messagePosted(ctx context.Context, user string) (<-chan Message, error) {
+	if err := s.redisClient.LPush("users", user).Err(); err != nil {
+		return nil, err
+	}
+
+	messages := make(chan Message, 1)
+
+	s.mutex.Lock()
+	s.messageChannels[user] = messages
+	s.mutex.Unlock()
+
+	go func() {
+		<-ctx.Done()
+		s.mutex.Lock()
+		delete(s.messageChannels, user)
+		s.mutex.Unlock()
+	}()
+
+	return messages, nil
 }
 
 func (s *graphQLServer) Query_messages(ctx context.Context) ([]Message, error) {
@@ -97,8 +136,4 @@ func (s *graphQLServer) Query_users(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 	return res, nil
-}
-
-func (s *graphQLServer) Subscription_messagePosted(ctx context.Context) (<-chan Message, error) {
-	return s.messageCh, nil
 }

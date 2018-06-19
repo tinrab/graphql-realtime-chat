@@ -8,7 +8,7 @@ type Message {
 }
 
 type Mutation {
-  postMessage(text: String!): Message
+  postMessage(user: String!, text: String!): Message
 }
 
 type Query {
@@ -17,5 +17,5 @@ type Query {
 }
 
 type Subscription {
-  messagePosted: Message!
+  messagePosted(user: String!): Message!
 }
