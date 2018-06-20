@@ -1,17 +1,23 @@
 <template>
-  <form>
+  <div class="row">
+    <form class="col-12 form"
+          v-on:submit.prevent="onLoginClick">
 
-    <input type="text"
-           class="form-control"
-           :class="{'is-invalid': !isInputValid, 'mb-2': isInputValid}"
-           placeholder="Username..."
-           v-model.trim="userName"
-           required>
-    <div class="invalid-feedback mb-2">
-      Please provide a valid username.
-    </div>
+      <div class="input-group">
+        <input type="text"
+               class="form-control"
+               :class="{'is-invalid': !isInputValid, 'mb-2': isInputValid}"
+               placeholder="Username..."
+               v-model.trim="userName"
+               required>
+        <div class="input-group-append">
+          <button class="btn btn-secondary"
+                  type="submit">Log in</button>
+        </div>
+      </div>
 
-  </form>
+    </form>
+  </div>
 </template>
 
 <script>
@@ -26,6 +32,20 @@ export default {
       return this.userName.length > 0;
     },
   },
+  methods: {
+    onLoginClick() {
+      if (this.isInputValid) {
+        this.$setCurrentUser(this.userName);
+        this.$router.push({ path: '/' });
+      }
+    },
+  },
 };
 </script>
 
+<style lang="scss" scoped>
+.form {
+  max-width: 480px;
+  margin: 0 auto;
+}
+</style>

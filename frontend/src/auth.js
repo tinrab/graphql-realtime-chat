@@ -1,10 +1,10 @@
 const AuthPlugin = {
   install(Vue, options) {
     Vue.prototype.$setCurrentUser = function(user) {
-      this.user = user;
+      Vue.prototype.user = user;
     };
     Vue.prototype.$currentUser = function() {
-      return this.user;
+      return Vue.prototype.user;
     };
   },
 };

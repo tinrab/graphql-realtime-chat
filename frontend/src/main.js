@@ -8,6 +8,7 @@ import { WebSocketLink } from 'apollo-link-ws';
 import { getMainDefinition } from 'apollo-utilities';
 import 'bootstrap/scss/bootstrap.scss';
 
+import router from './router';
 import App from './App.vue';
 import store from './store';
 import { AuthPlugin } from './auth';
@@ -43,6 +44,7 @@ Vue.use(VueApollo);
 Vue.use(AuthPlugin);
 
 const vm = new Vue({
+  router,
   store,
   provide: apolloProvider.provide(),
   render: (h) => h(App),
