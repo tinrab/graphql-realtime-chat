@@ -6,9 +6,11 @@ import VueApollo from 'vue-apollo';
 import { split } from 'apollo-link';
 import { WebSocketLink } from 'apollo-link-ws';
 import { getMainDefinition } from 'apollo-utilities';
+import 'bootstrap/scss/bootstrap.scss';
 
 import App from './App.vue';
 import store from './store';
+import { AuthPlugin } from './auth';
 
 Vue.config.productionTip = false;
 
@@ -38,9 +40,11 @@ const apolloProvider = new VueApollo({
 });
 
 Vue.use(VueApollo);
+Vue.use(AuthPlugin);
 
-new Vue({
+const vm = new Vue({
   store,
   provide: apolloProvider.provide(),
   render: (h) => h(App),
-}).$mount('#app');
+});
+vm.$mount('#app');

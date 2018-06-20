@@ -5,6 +5,7 @@ import (
 	context "context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -63,7 +64,8 @@ func (s *graphQLServer) Serve(route string, port int) error {
 }
 
 func (s *graphQLServer) Mutation_postMessage(ctx context.Context, user string, text string) (*Message, error) {
-	if err := s.redisClient.LPush("users", user).Err(); err != nil {
+	if err := s.redisClient.SAdd("users", user).Err(); err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -75,6 +77,7 @@ func (s *graphQLServer) Mutation_postMessage(ctx context.Context, user string, t
 	}
 	mj, _ := json.Marshal(m)
 	if err := s.redisClient.LPush("messages", mj).Err(); err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -88,7 +91,8 @@ func (s *graphQLServer) Mutation_postMessage(ctx context.Context, user string, t
 }
 
 func (s *graphQLServer) Subscription_messagePosted(ctx context.Context, user string) (<-chan Message, error) {
-	if err := s.redisClient.LPush("users", user).Err(); err != nil {
+	if err := s.redisClient.SAdd("users", user).Err(); err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -111,10 +115,12 @@ func (s *graphQLServer) Subscription_messagePosted(ctx context.Context, user str
 func (s *graphQLServer) Query_messages(ctx context.Context) ([]Message, error) {
 	cmd := s.redisClient.LRange("messages", 0, -1)
 	if cmd.Err() != nil {
+		log.Println(cmd.Err())
 		return nil, cmd.Err()
 	}
 	res, err := cmd.Result()
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	messages := []Message{}
@@ -127,12 +133,14 @@ func (s *graphQLServer) Query_messages(ctx context.Context) ([]Message, error) {
 }
 
 func (s *graphQLServer) Query_users(ctx context.Context) ([]string, error) {
-	cmd := s.redisClient.LRange("users", 0, -1)
+	cmd := s.redisClient.SMembers("users")
 	if cmd.Err() != nil {
+		log.Println(cmd.Err())
 		return nil, cmd.Err()
 	}
 	res, err := cmd.Result()
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	return res, nil
