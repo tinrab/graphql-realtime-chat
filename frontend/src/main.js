@@ -10,7 +10,6 @@ import 'bootstrap/scss/bootstrap.scss';
 
 import router from './router';
 import App from './App.vue';
-import store from './store';
 import { AuthPlugin } from './auth';
 
 Vue.config.productionTip = false;
@@ -45,7 +44,6 @@ Vue.use(AuthPlugin);
 
 const vm = new Vue({
   router,
-  store,
   provide: apolloProvider.provide(),
   render: (h) => h(App),
 });

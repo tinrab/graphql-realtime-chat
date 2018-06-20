@@ -6,7 +6,7 @@
       <div class="input-group">
         <input type="text"
                class="form-control"
-               :class="{'is-invalid': !isInputValid, 'mb-2': isInputValid}"
+               :class="{'is-invalid': !isInputValid}"
                placeholder="Username..."
                v-model.trim="userName"
                required>

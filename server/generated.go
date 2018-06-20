@@ -23,6 +23,7 @@ type Resolvers interface {
 	Query_users(ctx context.Context) ([]string, error)
 
 	Subscription_messagePosted(ctx context.Context, user string) (<-chan Message, error)
+	Subscription_userJoined(ctx context.Context, user string) (<-chan string, error)
 }
 
 type executableSchema struct {
@@ -411,6 +412,8 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel []query.Selec
 	switch fields[0].Name {
 	case "messagePosted":
 		return ec._Subscription_messagePosted(ctx, fields[0])
+	case "userJoined":
+		return ec._Subscription_userJoined(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}
@@ -441,6 +444,35 @@ func (ec *executionContext) _Subscription_messagePosted(ctx context.Context, fie
 		}
 		var out graphql.OrderedMap
 		out.Add(field.Alias, func() graphql.Marshaler { return ec._Message(ctx, field.Selections, &res) }())
+		return &out
+	}
+}
+
+func (ec *executionContext) _Subscription_userJoined(ctx context.Context, field graphql.CollectedField) func() graphql.Marshaler {
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := field.Args["user"]; ok {
+		var err error
+		arg0, err = graphql.UnmarshalString(tmp)
+		if err != nil {
+			ec.Error(ctx, err)
+			return nil
+		}
+	}
+	args["user"] = arg0
+	ctx = graphql.WithResolverContext(ctx, &graphql.ResolverContext{Field: field})
+	results, err := ec.resolvers.Subscription_userJoined(ctx, args["user"].(string))
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	return func() graphql.Marshaler {
+		res, ok := <-results
+		if !ok {
+			return nil
+		}
+		var out graphql.OrderedMap
+		out.Add(field.Alias, func() graphql.Marshaler { return graphql.MarshalString(res) }())
 		return &out
 	}
 }
@@ -1203,5 +1235,6 @@ type Query {
 
 type Subscription {
   messagePosted(user: String!): Message!
+  userJoined(user: String!): String!
 }
 `)

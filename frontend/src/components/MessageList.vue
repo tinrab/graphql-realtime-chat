@@ -47,7 +47,13 @@ export default {
           `,
           variables: () => ({ user: user }),
           updateQuery: (prev, { subscriptionData }) => {
+            if (!subscriptionData.data) {
+              return prev;
+            }
             const message = subscriptionData.data.messagePosted;
+            if (prev.messages.find((m) => m.id === message.id)) {
+              return prev;
+            }
             return Object.assign({}, prev, {
               messages: [message, ...prev.messages],
             });
