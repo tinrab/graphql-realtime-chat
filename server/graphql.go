@@ -1,4 +1,5 @@
-//go:generate gqlgen -schema ./schema.graphql
+//go:generate gorunpkg github.com/vektah/gqlgen
+
 package server
 
 import (
