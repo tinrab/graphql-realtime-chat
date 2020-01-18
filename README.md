@@ -7,12 +7,12 @@ Underlying source code for the article [Real-time Chat with GraphQL Subscription
 Run server:
 
 ```
-$ docker-compose up -d
+$ docker-compose up -d --build
 ```
 
 Run Vue app:
 
 ```
 $ cd frontend
-$ yarn serve
+$ npm run start
 ```
